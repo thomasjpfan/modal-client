@@ -44,11 +44,11 @@ MOUNT_PUT_FILE_CLIENT_TIMEOUT = 10 * 60  # 10 min max for transferring files
 # These can be updated safely, but changes will trigger a rebuild for all images
 # that rely on `add_python()` in their constructor.
 PYTHON_STANDALONE_VERSIONS: dict[str, tuple[str, str]] = {
-    "3.10": ("20230826", "3.10.13"),
-    "3.11": ("20230826", "3.11.5"),
-    "3.12": ("20240107", "3.12.1"),
-    "3.13": ("20241008", "3.13.0"),
-    "3.14": ("20251205", "3.14.2"),
+    # "3.10": ("20230826", "3.10.13"),
+    # "3.11": ("20230826", "3.11.5"),
+    # "3.12": ("20240107", "3.12.1"),
+    # "3.13": ("20241008", "3.13.0"),
+    # "3.14": ("20251205", "3.14.2"),
     "3.14t": ("20251209", "3.14.2t"),
 }
 
@@ -772,17 +772,17 @@ async def _create_single_client_dependency_mount(
 ):
     import tempfile
 
-    profile_environment = config.get("environment")
+    # profile_environment = config.get("environment")
     abi_tag = "cp" + python_version.replace(".", "")
     mount_name = f"{builder_version}-{abi_tag}-{platform}-{arch}"
 
-    if check_if_exists:
-        try:
-            await Mount.from_name(mount_name, namespace=api_pb2.DEPLOYMENT_NAMESPACE_GLOBAL).hydrate.aio(client)
-            print(f"➖ Found existing mount {mount_name} in global namespace.")  # noqa: T201
-            return
-        except modal.exception.NotFoundError:
-            pass
+    # if check_if_exists:
+    #     try:
+    #         await Mount.from_name(mount_name, namespace=api_pb2.DEPLOYMENT_NAMESPACE_GLOBAL).hydrate.aio(client)
+    #         print(f"➖ Found existing mount {mount_name} in global namespace.")  # noqa: T201
+    #         return
+    #     except modal.exception.NotFoundError:
+    #         pass
 
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmpd:
         print(f"📦 Building {mount_name}.")  # noqa: T201
@@ -806,6 +806,7 @@ async def _create_single_client_dependency_mount(
                 python_version,
             ]
         )
+        print(cmd)  # noqa: T201
         proc = await asyncio.create_subprocess_shell(
             cmd,
             stdout=asyncio.subprocess.PIPE,
@@ -820,33 +821,34 @@ async def _create_single_client_dependency_mount(
 
         print(f"🌐 Downloaded and unpacked {mount_name} packages to {tmpd}.")  # noqa: T201
 
-        python_mount = Mount._from_local_dir(tmpd, remote_path=REMOTE_PACKAGES_PATH)
+        # For the off chance that dry-run does not work
+        # python_mount = Mount._from_local_dir(tmpd, remote_path=REMOTE_PACKAGES_PATH)
 
-        with tempfile.NamedTemporaryFile() as sitecustomize:
-            sitecustomize.write(
-                SITECUSTOMIZE_CONTENT.encode("utf-8"),
-            )
-            sitecustomize.flush()
+        # with tempfile.NamedTemporaryFile() as sitecustomize:
+        #     sitecustomize.write(
+        #         SITECUSTOMIZE_CONTENT.encode("utf-8"),
+        #     )
+        #     sitecustomize.flush()
 
-            python_mount = python_mount.add_local_file(
-                sitecustomize.name,
-                remote_path=REMOTE_SITECUSTOMIZE_PATH,
-            )
+        #     python_mount = python_mount.add_local_file(
+        #         sitecustomize.name,
+        #         remote_path=REMOTE_SITECUSTOMIZE_PATH,
+        #     )
 
-            if not dry_run:
-                try:
-                    await python_mount._deploy.aio(
-                        mount_name,
-                        api_pb2.DEPLOYMENT_NAMESPACE_GLOBAL,
-                        environment_name=profile_environment,
-                        allow_overwrite=allow_overwrite,
-                        client=client,
-                    )
-                    print(f"✅ Deployed mount {mount_name} to global namespace.")  # noqa: T201
-                except modal.exception.Error as e:
-                    print(f"⚠️ Mount creation failed with {type(e).__name__}: {e}")  # noqa: T201
-            else:
-                print(f"Dry run - skipping deployment of mount {mount_name}")  # noqa: T201
+        #     if not dry_run:
+        #         try:
+        #             await python_mount._deploy.aio(
+        #                 mount_name,
+        #                 api_pb2.DEPLOYMENT_NAMESPACE_GLOBAL,
+        #                 environment_name=profile_environment,
+        #                 allow_overwrite=allow_overwrite,
+        #                 client=client,
+        #             )
+        #             print(f"✅ Deployed mount {mount_name} to global namespace.")  # noqa: T201
+        #         except modal.exception.Error as e:
+        #             print(f"⚠️ Mount creation failed with {type(e).__name__}: {e}")  # noqa: T201
+        #     else:
+        #         print(f"Dry run - skipping deployment of mount {mount_name}")  # noqa: T201
 
 
 async def _create_client_dependency_mounts(
@@ -859,7 +861,7 @@ async def _create_client_dependency_mounts(
     arch = "x86_64"
     platform_tags = [
         ("manylinux_2_17", f"{arch}-manylinux_2_17"),  # glibc >= 2.17
-        ("musllinux_1_2", f"{arch}-unknown-linux-musl"),  # musl >= 1.2
+        # ("musllinux_1_2", f"{arch}-unknown-linux-musl"),  # musl >= 1.2
     ]
     coros = []
     for python_version in python_versions:
