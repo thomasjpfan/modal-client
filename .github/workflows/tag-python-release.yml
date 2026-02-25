@@ -40,7 +40,7 @@ jobs:
                 if ! git rev-parse "$tag" >/dev/null 2>&1; then
                   echo "Tagging commit $commit with $tag"
                   git tag "$tag" "$commit"
-                  git push origin "v$tag"
+                  git push origin "$tag"
                 else
                   echo "Tag $tag already exists, skipping."
                 fi
