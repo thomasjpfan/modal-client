@@ -1,0 +1,49 @@
+name: Tag Python Release
+
+on:
+  push:
+    branches:
+      - main
+
+
+jobs:
+  tag-release-commits:
+    name: Tag release commits
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          sparse-checkout: modal_version/__init__.py
+
+      - name: Tag and push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch --tags origin
+
+          # Iterate through the commits in the push event (from oldest to newest)
+          for commit in ${{ join(github.event.commits.*.id, ' ') }}; do
+            echo "Checking commit $commit"
+            # Check if modal_version/__init__.py was modified in this commit
+            if git diff-tree --no-commit-id --name-only -r "$commit" | grep -q "^modal_version/__init__.py$"; then
+              # Extract the version string from the file at this commit
+              version=$(git show "$commit:modal_version/__init__.py" | sed -n 's/^__version__ = ["'\'']\(.*\)["'\'']/\1/p')
+              if [ -n "$version" ]; then
+                tag="v$version"
+                if ! git rev-parse "$tag" >/dev/null 2>&1; then
+                  echo "Tagging commit $commit with $tag"
+                  git tag "$tag" "$commit"
+                  git push origin "$tag"
+                else
+                  echo "Tag $tag already exists, skipping."
+                fi
+              fi
+            fi
+          done
+
+
