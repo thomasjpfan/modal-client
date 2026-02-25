@@ -15,10 +15,11 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           sparse-checkout: modal_version/__init__.py
+          fetch-tags: true
 
       - name: Tag and push
         env:
@@ -26,7 +27,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch --tags origin
 
           # Iterate through the commits in the push event (from oldest to newest)
           for commit in ${{ join(github.event.commits.*.id, ' ') }}; do
